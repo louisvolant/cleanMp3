@@ -2,20 +2,40 @@
 __author__ = 'Louis Volant'
 __version__= 1.0
 
-import logging, json, os
+import logging, json, os, re
+import unicodedata
 import eyed3
 
-def cleanFilePath(inputFilePath):
-    file_path = inputFilePath
-    cleanedFilePath = file_path.title().replace('.Mp3', '.mp3')
+def cleanFilePath(inputFilePath, cleaned_filepath):
+
+    file_path = inputFilePath.replace('.Mp3', '.mp3')
+    cleanedFilePath = cleaned_filepath + ".mp3"
+
     if(file_path != cleanedFilePath):
-        logging.info('Will rename:{0}/To:{1}'
+        logging.info('FILENAME TO rename:{0}/To:{1}'
                  .format(file_path,cleanedFilePath))
         os.rename(file_path, cleanedFilePath)
     else:
-        logging.info('NOT DIFFERENT:{0}/To:{1}'
+        logging.info('FILENAME NOT DIFFERENT:{0}/To:{1}'
                  .format(file_path,cleanedFilePath))
     return cleanedFilePath
+
+
+def custom_title(s):
+    words = s.split()
+    capitalized_words = []
+
+    for word in words:
+        if len(word) > 0:
+            logging.info('Word to process: {0}'.format(word))
+            first_letter = word[0].upper()
+            rest_of_word = word[1:].lower()
+            capitalized_word = first_letter + rest_of_word
+            capitalized_words.append(capitalized_word)
+            logging.info('Word processed: {0}'.format(capitalized_word))
+
+    return ' '.join(capitalized_words)
+
 
 # README
 # execute with
@@ -23,23 +43,24 @@ def cleanFilePath(inputFilePath):
 # $ mp3clean % python3 mp3clean.py
 
 def handleMp3File(inputFilePath):
-    file_path = cleanFilePath(inputFilePath)
-    mp3file = eyed3.load(file_path)
+    _cleanedFileName = inputFilePath.replace(".mp3", "")
+    _fileNameParts = _cleanedFileName.split(' - ');
+    for i in _fileNameParts:
+        i = i.strip()
+
+    _artist = custom_title(_fileNameParts[0])
+    _fileNameParts.pop(0)
+    _title = custom_title(' - '.join(_fileNameParts))
+    _cleaned_filepath = ' - '.join([_artist, _title])
+
+    cleaned_file_path = cleanFilePath(inputFilePath, _cleaned_filepath)
+
+    mp3file = eyed3.load(cleaned_file_path)
 
     _originalTitle = mp3file.tag.title
     _originalArtist = mp3file.tag.artist
 
-    _cleanedFileName = file_path.replace(".mp3", "").title()
-    _fileNameParts = _cleanedFileName.split(' - ');
-    for i in _fileNameParts:
-        i = i.strip().title()
-
-    _artist = _fileNameParts[0]
-    _fileNameParts.pop(0)
-    _title = ' - '.join(_fileNameParts)
-
-
-    logging.info('OriginalTitle:{0}/Title:{1}/OriginalArtist:{2}/Artist:{3}'
+    logging.info('TAGS:OriginalTitle:{0}/Title:{1}/OriginalArtist:{2}/Artist:{3}'
                  .format(_originalTitle,_title,_originalArtist,_artist))
 
     mp3file.initTag()
