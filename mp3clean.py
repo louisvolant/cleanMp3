@@ -6,6 +6,12 @@ import logging, json, os, re
 import unicodedata
 import eyed3
 
+
+# README
+# execute with
+# $ mp3clean % pip install os
+# $ mp3clean % python3 mp3clean.py
+
 def cleanFilePath(inputFilePath, cleaned_filepath):
 
     file_path = inputFilePath.replace('.Mp3', '.mp3')
@@ -27,20 +33,14 @@ def custom_title(s):
 
     for word in words:
         if len(word) > 0:
-            logging.info('Word to process: {0}'.format(word))
+            #logging.info('Word to process: {0}'.format(word))
             first_letter = word[0].upper()
             rest_of_word = word[1:].lower()
             capitalized_word = first_letter + rest_of_word
             capitalized_words.append(capitalized_word)
-            logging.info('Word processed: {0}'.format(capitalized_word))
+            #logging.info('Word processed: {0}'.format(capitalized_word))
 
     return ' '.join(capitalized_words)
-
-
-# README
-# execute with
-# $ mp3clean % pip install os
-# $ mp3clean % python3 mp3clean.py
 
 def handleMp3File(inputFilePath):
     _cleanedFileName = inputFilePath.replace(".mp3", "")
