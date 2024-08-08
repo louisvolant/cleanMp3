@@ -6,7 +6,9 @@ Python3 tool to clean MP3 tags and specifically pictures
 Python3, eyed3, os, logging
 
 ````
-pip3 install eyed3 os logging
+# python3 -m venv myenv
+# source myenv/bin/activate
+# pip install os
 ````
 
 ## How to execute

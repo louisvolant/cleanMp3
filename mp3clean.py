@@ -2,15 +2,17 @@
 __author__ = 'Louis Volant'
 __version__= 1.0
 
-import logging, json, os, re
-import unicodedata
+import logging, os
 import eyed3
 
 
 # README
 # execute with
-# $ mp3clean % pip install os
-# $ mp3clean % python3 mp3clean.py
+# python3 -m venv myenv
+# source myenv/bin/activate
+# pip install os
+# python3 youtube2mp3.py 'https://www.youtube.com/watch?v=YOUTUBE_ID' 
+
 
 def cleanFilePath(inputFilePath, cleaned_filepath):
 
