@@ -8,7 +8,7 @@ Python3, eyed3, os, logging
 ````
 # python3 -m venv myenv
 # source myenv/bin/activate
-# pip install os
+# pip install eyed3
 ````
 
 ## How to execute

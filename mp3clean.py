@@ -10,7 +10,7 @@ import eyed3
 # execute with
 # python3 -m venv myenv
 # source myenv/bin/activate
-# pip install os
+# pip install eyed3
 # python3 youtube2mp3.py 'https://www.youtube.com/watch?v=YOUTUBE_ID' 
 
 
@@ -59,19 +59,28 @@ def handleMp3File(inputFilePath):
 
     mp3file = eyed3.load(cleaned_file_path)
 
-    _originalTitle = mp3file.tag.title
-    _originalArtist = mp3file.tag.artist
+    if mp3file is not None:
+        _originalTitle = ''
+        _originalArtist = ''
+        if hasattr(mp3file, 'tag'):
+            if hasattr(mp3file.tag, 'title'):
+                _originalTitle = mp3file.tag.title
+            if hasattr(mp3file.tag, 'artist'):
+                _originalArtist = mp3file.tag.artist
 
-    logging.info('TAGS:OriginalTitle:{0}/Title:{1}/OriginalArtist:{2}/Artist:{3}'
-                 .format(_originalTitle,_title,_originalArtist,_artist))
+        logging.info('TAGS:OriginalTitle:{0}/Title:{1}/OriginalArtist:{2}/Artist:{3}'
+                    .format(_originalTitle,_title,_originalArtist,_artist))
 
-    mp3file.initTag()
-    mp3file.tag.save();
+        mp3file.initTag()
+        mp3file.tag.save()
 
-    mp3file.tag.artist = _artist
-    mp3file.tag.title = _title
+        mp3file.tag.artist = _artist
+        mp3file.tag.title = _title
 
-    mp3file.tag.save()
+        mp3file.tag.save()
+    else:
+        logging.info('eyed3 couldn\'t load:{0}'.format(_cleanedFileName))
+
 
 
 def main():
