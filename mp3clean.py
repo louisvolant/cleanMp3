@@ -10,7 +10,7 @@ import eyed3
 # execute with
 # python3 -m venv myenv
 # source myenv/bin/activate
-# pip install eyed3
+# pip install -r requirements.txt
 # python3 youtube2mp3.py 'https://www.youtube.com/watch?v=YOUTUBE_ID' 
 
 
