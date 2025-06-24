@@ -94,12 +94,36 @@ def custom_title(s):
 
 def handleMp3File(inputFilePath):
     _cleanedFileName = inputFilePath.replace(".mp3", "")
+
+    # Standardize the long dash (en dash '–' and em dash '—') to a standard hyphen-minus ('-') ---
+
+    # 1. Replace the long dash ' – ' (en-dash with spaces) with the desired ' - '
+    # This also converts the character and ensures the desired spacing.
+    _cleanedFileName = _cleanedFileName.replace(' – ', ' - ')
+
+    # 2. Optionally, handle the em-dash '—' as well, which is sometimes used as a separator
+    _cleanedFileName = _cleanedFileName.replace('—', ' - ')
+
+    # 3. Handle cases where the long dash might not have spaces around it (e.g., 'Artist–Title')
+    _cleanedFileName = _cleanedFileName.replace('–', '-')
+
+    # Now, the split will correctly work on the standardized ' - ' delimiter
     _fileNameParts = _cleanedFileName.split(' - ');
     for i in _fileNameParts:
         i = i.strip()
 
     _artist = custom_title(_fileNameParts[0])
-    _fileNameParts.pop(0)
+
+    # Ensure there is more than one part before popping
+    if len(_fileNameParts) > 1:
+        _fileNameParts.pop(0)
+    else:
+        # If no delimiter was found, set title to the whole original string
+        # (this prevents the `pop` from running and ensures the title is not empty)
+        # However, since we want to extract the artist, we'll proceed with the existing logic
+        # but ensure we don't try to join an empty list.
+        pass
+
     _title = custom_title(' - '.join(_fileNameParts))
     _cleaned_filepath = ' - '.join([_artist, _title])
 
@@ -117,7 +141,7 @@ def handleMp3File(inputFilePath):
                 _originalArtist = mp3file.tag.artist
 
         logging.info('TAGS:OriginalTitle:{0}/Title:{1}/OriginalArtist:{2}/Artist:{3}'
-                    .format(_originalTitle,_title,_originalArtist,_artist))
+                     .format(_originalTitle, _title, _originalArtist, _artist))
 
         mp3file.initTag()
         mp3file.tag.save()
@@ -128,7 +152,6 @@ def handleMp3File(inputFilePath):
         mp3file.tag.save()
     else:
         logging.info('eyed3 couldn\'t load:{0}'.format(_cleanedFileName))
-
 
 
 def main():
