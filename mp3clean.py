@@ -29,20 +29,68 @@ def cleanFilePath(inputFilePath, cleaned_filepath):
     return cleanedFilePath
 
 
+import re
+
+import re
+
+
 def custom_title(s):
-    words = s.split()
-    capitalized_words = []
+    """
+    Capitalizes the first letter of each word in a string, while preserving acronyms and
+    handling words within parentheses correctly.
+
+    Args:
+        s (str): The string to be formatted.
+
+    Returns:
+        str: The string with corrected capitalization.
+    """
+    # Regex to find words, including those with special characters like ' and numbers.
+    words = re.findall(r"[\w']+|\S", s)
+    result = []
+
+    # Flag to check if we are inside a parenthesis
+    in_paren = False
 
     for word in words:
-        if len(word) > 0:
-            #logging.info('Word to process: {0}'.format(word))
-            first_letter = word[0].upper()
-            rest_of_word = word[1:].lower()
-            capitalized_word = first_letter + rest_of_word
-            capitalized_words.append(capitalized_word)
-            #logging.info('Word processed: {0}'.format(capitalized_word))
+        if word == "(":
+            in_paren = True
+            result.append(word)
+            continue
+        elif word == ")":
+            in_paren = False
+            result.append(word)
+            continue
 
-    return ' '.join(capitalized_words)
+        # Check if the word is an acronym (all caps) and not a single letter
+        if word.isupper() and len(word) > 1:
+            result.append(word)
+        elif in_paren or (not result or result[-1] not in ["(", "["]):
+            result.append(word.title())
+        else:
+            result.append(word.lower())
+
+    # Rejoin the words, handling the spacing correctly.
+    final_string = ""
+    for i, part in enumerate(result):
+        # Handle cases where no space is needed before the word
+        if i == 0:
+            final_string += part
+        elif part in [",", ".", ")", "!", "?", "]", "'s"]:
+            final_string += part
+        # Handle cases where a space is needed
+        elif result[i - 1] in ["(", "["]:
+            final_string += part
+        else:
+            final_string += " " + part
+
+    # Clean up any extra spaces at the beginning
+    final_string = final_string.strip()
+
+    # Fix the issue with spaces after a comma
+    final_string = re.sub(r'(\w+)\s,', r'\1,', final_string)
+
+    return final_string
 
 def handleMp3File(inputFilePath):
     _cleanedFileName = inputFilePath.replace(".mp3", "")
