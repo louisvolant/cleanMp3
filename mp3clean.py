@@ -1,8 +1,11 @@
 #!/usr/local/bin/python3
 __author__ = 'Louis Volant'
-__version__= 1.0
+__version__ = 1.1
 
-import logging, os
+import logging
+import os
+import re
+import unicodedata
 import eyed3
 
 
@@ -11,45 +14,43 @@ import eyed3
 # python3 -m venv myenv
 # source myenv/bin/activate
 # pip install -r requirements.txt
-# python3 youtube2mp3.py 'https://www.youtube.com/watch?v=YOUTUBE_ID' 
-
+# python3 youtube2mp3.py 'https://www.youtube.com/watch?v=YOUTUBE_ID'
 
 def cleanFilePath(inputFilePath, cleaned_filepath):
-
+    # Ensure extension is lowercase
     file_path = inputFilePath.replace('.Mp3', '.mp3')
     cleanedFilePath = cleaned_filepath + ".mp3"
 
-    if(file_path != cleanedFilePath):
-        logging.info('FILENAME TO rename:{0}/To:{1}'
-                 .format(file_path,cleanedFilePath))
-        os.rename(file_path, cleanedFilePath)
+    if file_path != cleanedFilePath:
+        logging.info('FILENAME TO rename: {0} / To: {1}'
+                     .format(file_path, cleanedFilePath))
+        try:
+            os.rename(file_path, cleanedFilePath)
+        except OSError as e:
+            logging.error('Error renaming file: {0}'.format(e))
     else:
-        logging.info('FILENAME NOT DIFFERENT:{0}/To:{1}'
-                 .format(file_path,cleanedFilePath))
+        logging.info('FILENAME NOT DIFFERENT: {0} / To: {1}'
+                     .format(file_path, cleanedFilePath))
     return cleanedFilePath
-
-
-import re
-
-import re
 
 
 def custom_title(s):
     """
-    Capitalizes the first letter of each word in a string, while preserving acronyms and
-    handling words within parentheses correctly.
-
-    Args:
-        s (str): The string to be formatted.
-
-    Returns:
-        str: The string with corrected capitalization.
+    Capitalizes the first letter of each word in a string, while preserving acronyms,
+    handling words within parentheses correctly, and avoiding unwanted spaces around apostrophes.
     """
-    # Regex to find words, including those with special characters like ' and numbers.
-    words = re.findall(r"[\w']+|\S", s)
+    if not s:
+        return ""
+
+    # Normalize unicode to NFC (joins base characters with their diacritics like 'ë')
+    s = unicodedata.normalize('NFC', s)
+
+    # Updated regex:
+    # [\w'’]+ matches alphanumeric characters AND straight/curly apostrophes as one block.
+    # \S matches any other non-whitespace character.
+    words = re.findall(r"[\w'’]+|\S", s)
     result = []
 
-    # Flag to check if we are inside a parenthesis
     in_paren = False
 
     for word in words:
@@ -66,6 +67,7 @@ def custom_title(s):
         if word.isupper() and len(word) > 1:
             result.append(word)
         elif in_paren or (not result or result[-1] not in ["(", "["]):
+            # .title() works fine on words containing apostrophes (e.g., "C’est" -> "C’Est")
             result.append(word.title())
         else:
             result.append(word.lower())
@@ -73,98 +75,83 @@ def custom_title(s):
     # Rejoin the words, handling the spacing correctly.
     final_string = ""
     for i, part in enumerate(result):
-        # Handle cases where no space is needed before the word
         if i == 0:
             final_string += part
+        # No space before these punctuation marks
         elif part in [",", ".", ")", "!", "?", "]", "'s"]:
             final_string += part
-        # Handle cases where a space is needed
+        # No space after opening brackets
         elif result[i - 1] in ["(", "["]:
             final_string += part
         else:
             final_string += " " + part
 
-    # Clean up any extra spaces at the beginning
+    # Final cleanup
     final_string = final_string.strip()
-
-    # Fix the issue with spaces after a comma
-    final_string = re.sub(r'(\w+)\s,', r'\1,', final_string)
+    # Fix the issue with spaces before a comma
+    final_string = re.sub(r'\s+([,.!?])', r'\1', final_string)
 
     return final_string
 
+
 def handleMp3File(inputFilePath):
-    _cleanedFileName = inputFilePath.replace(".mp3", "")
+    # Remove extension for processing
+    _cleanedFileName = re.sub(r'\.mp3$', '', inputFilePath, flags=re.IGNORECASE)
 
-    # Standardize the long dash (en dash '–' and em dash '—') to a standard hyphen-minus ('-') ---
+    # Standardize different types of dashes
+    _cleanedFileName = _cleanedFileName.replace(' – ', ' - ')  # en dash
+    _cleanedFileName = _cleanedFileName.replace('—', ' - ')  # em dash
+    _cleanedFileName = _cleanedFileName.replace('–', '-')  # simple en dash
 
-    # 1. Replace the long dash ' – ' (en-dash with spaces) with the desired ' - '
-    # This also converts the character and ensures the desired spacing.
-    _cleanedFileName = _cleanedFileName.replace(' – ', ' - ')
-
-    # 2. Optionally, handle the em-dash '—' as well, which is sometimes used as a separator
-    _cleanedFileName = _cleanedFileName.replace('—', ' - ')
-
-    # 3. Handle cases where the long dash might not have spaces around it (e.g., 'Artist–Title')
-    _cleanedFileName = _cleanedFileName.replace('–', '-')
-
-    # Now, the split will correctly work on the standardized ' - ' delimiter
-    _fileNameParts = _cleanedFileName.split(' - ');
-    for i in _fileNameParts:
-        i = i.strip()
+    # Split Artist and Title
+    _fileNameParts = _cleanedFileName.split(' - ')
+    _fileNameParts = [p.strip() for p in _fileNameParts]
 
     _artist = custom_title(_fileNameParts[0])
 
-    # Ensure there is more than one part before popping
     if len(_fileNameParts) > 1:
         _fileNameParts.pop(0)
+        _title = custom_title(' - '.join(_fileNameParts))
     else:
-        # If no delimiter was found, set title to the whole original string
-        # (this prevents the `pop` from running and ensures the title is not empty)
-        # However, since we want to extract the artist, we'll proceed with the existing logic
-        # but ensure we don't try to join an empty list.
-        pass
+        _title = "Unknown Title"
 
-    _title = custom_title(' - '.join(_fileNameParts))
-    _cleaned_filepath = ' - '.join([_artist, _title])
+    _new_filename_base = ' - '.join([_artist, _title])
+    cleaned_file_path = cleanFilePath(inputFilePath, _new_filename_base)
 
-    cleaned_file_path = cleanFilePath(inputFilePath, _cleaned_filepath)
+    # Update ID3 Tags
+    try:
+        mp3file = eyed3.load(cleaned_file_path)
+        if mp3file is not None:
+            _originalTitle = ""
+            _originalArtist = ""
 
-    mp3file = eyed3.load(cleaned_file_path)
+            if mp3file.tag:
+                _originalTitle = mp3file.tag.title if mp3file.tag.title else ""
+                _originalArtist = mp3file.tag.artist if mp3file.tag.artist else ""
+            else:
+                mp3file.initTag()
 
-    if mp3file is not None:
-        _originalTitle = ''
-        _originalArtist = ''
-        if hasattr(mp3file, 'tag'):
-            if hasattr(mp3file.tag, 'title'):
-                _originalTitle = mp3file.tag.title
-            if hasattr(mp3file.tag, 'artist'):
-                _originalArtist = mp3file.tag.artist
+            logging.info('TAGS: OriginalTitle: {0} / Title: {1} / OriginalArtist: {2} / Artist: {3}'
+                         .format(_originalTitle, _title, _originalArtist, _artist))
 
-        logging.info('TAGS:OriginalTitle:{0}/Title:{1}/OriginalArtist:{2}/Artist:{3}'
-                     .format(_originalTitle, _title, _originalArtist, _artist))
-
-        mp3file.initTag()
-        mp3file.tag.save()
-
-        mp3file.tag.artist = _artist
-        mp3file.tag.title = _title
-
-        mp3file.tag.save()
-    else:
-        logging.info('eyed3 couldn\'t load:{0}'.format(_cleanedFileName))
+            mp3file.tag.artist = _artist
+            mp3file.tag.title = _title
+            mp3file.tag.save()
+        else:
+            logging.warning('eyed3 couldn\'t load: {0}'.format(cleaned_file_path))
+    except Exception as e:
+        logging.error('Error processing ID3 tags for {0}: {1}'.format(cleaned_file_path, e))
 
 
 def main():
     dir_path = '.'
     for file_path in os.listdir(dir_path):
-        logging.info('Processing: {0}'.format(file_path))
-        if(file_path.title().endswith('.Mp3')):
+        # Check for .mp3 extension case-insensitively
+        if file_path.lower().endswith('.mp3'):
+            logging.info('Processing: {0}'.format(file_path))
             handleMp3File(file_path)
 
 
-
-
 if __name__ == '__main__':
-    ## Initialize logging before hitting main, in case we need extra debuggability
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(funcName)s - %(levelname)s - %(message)s')
     main()
